@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Timeline</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #f7f6f3;
+  --surface:   #ffffff;
+  --border:    #e2e0da;
+  --border-lt: #eeece8;
+  --text-pri:  #111111;
+  --text-sec:  #555555;
+  --text-mute: #999999;
+  --shadow:    0 1px 3px rgba(0,0,0,0.07);
+  --c-i:       #0284C7;
+  --c-f:       #CA8A04;
+  --c-d:       #C2410C;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text-pri); min-height: 100vh; }
+
+/* ── TOP BAR ─────────────────────────── */
+.topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 18px 28px 14px;
+  display: flex; align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap; gap: 14px;
+}
+.topbar-left h1 { font-size: 17px; font-weight: 700; color: var(--text-pri); letter-spacing: -0.3px; }
+.topbar-left .sub { font-size: 10px; color: var(--text-mute); margin-top: 3px; }
+
+.view-toggle {
+  display: flex; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 8px; padding: 3px; gap: 2px;
+}
+.vbtn {
+  font-family: 'Poppins', sans-serif;
+  font-size: 10px; font-weight: 600; color: var(--text-mute);
+  background: none; border: none; padding: 6px 14px; border-radius: 6px;
+  cursor: pointer; transition: background 0.15s, color 0.15s;
+  display: flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.vbtn:hover { color: var(--text-sec); }
+.vbtn.active { background: var(--surface); color: var(--text-pri); box-shadow: var(--shadow); }
+
+/* ── CONTENT ─────────────────────────── */
+.content { padding: 28px 28px 60px; }
+#view-gantt { display: block; }
+#view-list  { display: none; }
+.wrap { overflow-x: auto; padding-bottom: 8px; }
+
+/* ── GANTT ROWS ──────────────────────── */
+.row { display: flex; position: relative; }
+.lbl {
+  width: 240px; flex-shrink: 0;
+  display: flex; align-items: center;
+  padding-right: 12px; font-size: 10px;
+  color: var(--text-sec); min-height: 28px; line-height: 1.35;
+}
+.lbl.pre { color: var(--text-mute); font-style: italic; }
+.lbl.ms  { color: var(--text-pri); font-weight: 600; font-size: 10.5px; padding-left: 8px; }
+.lbl.ext { color: var(--text-mute); }
+.chart { position: relative; flex-shrink: 0; min-height: 28px; }
+.row.ms-row { border-left: 2px solid transparent; margin-left: -2px; }
+
+.hdr .lbl {
+  font-size: 8px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--text-mute); align-items: flex-end;
+  padding-bottom: 7px; border-bottom: 1px solid var(--border);
+}
+.hdr .chart { height: 66px; border-bottom: 1px solid var(--border); }
+.cat .lbl {
+  font-size: 8px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.9px; min-height: 34px; padding-top: 6px;
+  align-items: flex-end; padding-bottom: 4px;
+}
+.cat .chart { min-height: 34px; }
+.task { border-bottom: 1px solid var(--border-lt); }
+.task:hover .lbl:not(.ms) { color: var(--text-pri); }
+
+/* ── BARS ────────────────────────────── */
+.bar {
+  position: absolute; height: 20px; top: 4px; border-radius: 3px;
+  display: flex; align-items: center; padding: 0 7px; gap: 5px;
+  cursor: pointer; overflow: hidden;
+  transition: filter 0.12s, transform 0.12s;
+}
+.bar:hover { filter: brightness(0.88); transform: scaleY(1.06); }
+.tag {
+  font-size: 7px; font-weight: 700; letter-spacing: 0.3px;
+  padding: 1px 4px; border-radius: 2px; flex-shrink: 0; white-space: nowrap;
+}
+.bname { font-size: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── TICKS + BANDS ───────────────────── */
+.tick { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--border-lt); pointer-events: none; }
+.gband { position: absolute; top: 0; bottom: 0; }
+
+/* ── EASTER BUTTON ───────────────────── */
+.easter-btn {
+  position: absolute; top: 0; bottom: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  cursor: pointer; transition: background 0.2s; z-index: 10;
+  border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+}
+.easter-btn:hover { background: rgba(0,0,0,0.03) !important; }
+.easter-arrow { font-size: 8px; color: var(--text-mute); transition: transform 0.25s; line-height: 1; }
+.easter-label {
+  font-size: 5.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.4px; color: var(--text-mute);
+  writing-mode: vertical-rl; transform: rotate(180deg); margin-top: 3px;
+}
+.easter-day { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--border-lt); pointer-events: none; }
+
+/* ── MILESTONE BADGE ─────────────────── */
+.ms-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 3px;
+  font-size: 9px; margin-right: 6px; flex-shrink: 0;
+}
+
+/* ── TOOLTIP ─────────────────────────── */
+.tt {
+  position: fixed; z-index: 1000;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 16px; max-width: 310px;
+  pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.12); display: none;
+}
+.tt-name  { font-size: 11px; font-weight: 600; color: var(--text-pri); line-height: 1.45; margin-bottom: 8px; }
+.tt-row   { display: flex; align-items: center; gap: 8px; }
+.tt-badge { font-size: 8px; font-weight: 700; letter-spacing: 0.3px; padding: 2px 7px; border-radius: 3px; }
+.tt-dates { font-size: 9.5px; color: var(--text-mute); }
+.tt-tip   { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--border-lt); font-size: 9px; color: var(--text-sec); line-height: 1.55; }
+
+/* ── LEGEND + NOTES ──────────────────── */
+.legend {
+  display: flex; flex-wrap: wrap; gap: 14px;
+  margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border);
+}
+.leg { display: flex; align-items: center; gap: 6px; font-size: 9.5px; color: var(--text-mute); }
+.sw  { width: 11px; height: 11px; border-radius: 2px; flex-shrink: 0; }
+.notes { margin-top: 11px; font-size: 9.5px; color: var(--text-mute); line-height: 1.85; }
+.notes b { color: var(--text-pri); font-weight: 600; }
+
+/* ── LIST VIEW ───────────────────────── */
+.list-section { margin-bottom: 32px; }
+.list-section-header {
+  font-size: 8px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; padding: 8px 0 10px;
+  border-bottom: 2px solid; margin-bottom: 0;
+  display: flex; align-items: center; gap: 10px;
+}
+.list-row {
+  display: grid; grid-template-columns: 1fr 64px 180px;
+  align-items: center; padding: 9px 14px;
+  border-bottom: 1px solid var(--border-lt);
+  border-left: 3px solid transparent;
+  background: var(--surface); gap: 12px;
+  transition: background 0.1s;
+}
+.list-row:hover { background: var(--bg); }
+.list-row.ms-list { background: var(--bg); font-weight: 600; }
+.list-row.pre-list { opacity: 0.45; }
+.list-task { font-size: 10px; color: var(--text-pri); line-height: 1.4; }
+.list-task.ms-task  { font-weight: 600; }
+.list-task.pre-task { color: var(--text-mute); font-style: italic; }
+.list-owner {
+  display: inline-flex; align-items: center;
+  font-size: 7.5px; font-weight: 700; letter-spacing: 0.3px;
+  padding: 2px 7px; border-radius: 3px; justify-self: start;
+}
+.list-dates { font-size: 9px; color: var(--text-mute); justify-self: end; text-align: right; white-space: nowrap; }
+.list-icon  { font-size: 11px; margin-right: 4px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>RaffClub Flow Build Out</h1>
+    <p class="sub">Flows + Deliverability Fixes &ensp;·&ensp; Kick-off: Wed 1 Apr 2026 &ensp;·&ensp; Target live: Mon 27 Apr</p>
+  </div>
+  <div class="view-toggle">
+    <button class="vbtn active" id="btn-gantt" onclick="setView('gantt')">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <rect x="0" y="1" width="7" height="2.2" rx="0.8" fill="currentColor"/>
+        <rect x="0" y="5.4" width="10" height="2.2" rx="0.8" fill="currentColor"/>
+        <rect x="0" y="9.8" width="5" height="2.2" rx="0.8" fill="currentColor"/>
+      </svg>
+      Gantt
+    </button>
+    <button class="vbtn" id="btn-list" onclick="setView('list')">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <rect x="0" y="0.5" width="2" height="2" rx="0.5" fill="currentColor"/>
+        <rect x="3.5" y="0.5" width="9.5" height="2" rx="0.5" fill="currentColor"/>
+        <rect x="0" y="5.5" width="2" height="2" rx="0.5" fill="currentColor"/>
+        <rect x="3.5" y="5.5" width="9.5" height="2" rx="0.5" fill="currentColor"/>
+        <rect x="0" y="10.5" width="2" height="2" rx="0.5" fill="currentColor"/>
+        <rect x="3.5" y="10.5" width="9.5" height="2" rx="0.5" fill="currentColor"/>
+      </svg>
+      List
+    </button>
+  </div>
+</div>
+
+<div class="content">
+  <div id="view-gantt">
+    <div class="wrap"><div id="gantt"></div></div>
+    <div class="legend">
+      <div class="leg"><div class="sw" style="background:var(--c-i)"></div>Store API Integration</div>
+      <div class="leg"><div class="sw" style="background:var(--c-f)"></div>Core 4 Flows</div>
+      <div class="leg"><div class="sw" style="background:var(--c-d)"></div>Deliverability Fixes</div>
+      <div class="leg"><div class="sw" style="border:1.5px dashed #bbb;"></div>External (RaffClub / Lee)</div>
+      <div class="leg"><div class="sw" style="border:1px dashed #ccc;background:var(--bg)"></div>Pre-work</div>
+      <div class="leg">⭐ Milestone &ensp; 🚀 Launch</div>
+      <div class="leg">
+        <div class="sw" style="background:repeating-linear-gradient(-45deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);border:1px solid #ddd;"></div>
+        Weekend
+      </div>
+    </div>
+    <p class="notes">
+      <b>Easter:</b> Good Friday 3 Apr + Easter Monday 6 Apr. Kick-off: <b>Wed 1 Apr</b>.&ensp;
+      <b>Copywriting</b> starts Thu 9 Apr concurrent with RaffClub template approval, spanning the weekend of 11–12 Apr.&ensp;
+      <b>Deliverability</b> concurrent with RaffClub flow review (Mon–Wed 20–22 Apr).&ensp;
+      Target live: <b>Mon 27 Apr</b>.
+    </p>
+  </div>
+  <div id="view-list"></div>
+</div>
+
+<div class="tt" id="tt">
+  <div class="tt-name" id="tt-name"></div>
+  <div class="tt-row">
+    <span class="tt-badge" id="tt-badge"></span>
+    <span class="tt-dates" id="tt-dates"></span>
+  </div>
+  <div class="tt-tip" id="tt-tip"></div>
+</div>
+
+<script>
+// ── DATE SLOTS ───────────────────────────────────────────────────────────
+// 0:Mon30Mar  1:Tue31Mar  2:Wed1Apr   3:Thu2Apr
+// [Easter: Fri3–Mon6 Apr, collapsible]
+// 4:Tue7Apr   5:Wed8Apr   6:Thu9Apr   7:Fri10Apr
+// [Weekend: Sat11–Sun12 Apr]
+// 8:Mon13Apr  9:Tue14Apr  10:Wed15Apr 11:Thu16Apr 12:Fri17Apr
+// [Weekend: Sat18–Sun19 Apr]
+// 13:Mon20Apr 14:Tue21Apr 15:Wed22Apr 16:Thu23Apr 17:Fri24Apr
+// [Weekend: Sat25–Sun26 Apr]
+// 18:Mon27Apr
+
+const DAY_W            = 46;
+const EASTER_COLLAPSED = 28;
+const EASTER_EXPANDED  = 192;  // 4 × 48
+const WEEKEND_W        = 26;   // fixed weekend band (Sat+Sun)
+
+const DATES = [
+  ['30','Mar','Mon'], ['31','Mar','Tue'], ['1','Apr','Wed'],  ['2','Apr','Thu'],
+  ['7','Apr','Tue'],  ['8','Apr','Wed'],  ['9','Apr','Thu'],  ['10','Apr','Fri'],
+  ['13','Apr','Mon'], ['14','Apr','Tue'], ['15','Apr','Wed'], ['16','Apr','Thu'], ['17','Apr','Fri'],
+  ['20','Apr','Mon'], ['21','Apr','Tue'], ['22','Apr','Wed'], ['23','Apr','Thu'], ['24','Apr','Fri'],
+  ['27','Apr','Mon'],
+];
+
+const EASTER_DAYS = [
+  ['3','Apr','Fri','Good Friday'], ['4','Apr','Sat',''],
+  ['5','Apr','Sun',''],            ['6','Apr','Mon','Easter Monday'],
+];
+
+const WEEKENDS = [
+  { afterSlot:7,  label:'Sat–Sun 11–12 Apr' },
+  { afterSlot:12, label:'Sat–Sun 18–19 Apr' },
+  { afterSlot:17, label:'Sat–Sun 25–26 Apr' },
+];
+
+let easterExpanded = false;
+
+function easterW() { return easterExpanded ? EASTER_EXPANDED : EASTER_COLLAPSED; }
+
+function slotX(s) {
+  let x = s * DAY_W;
+  if (s >= 4)  x += easterW();    // Easter gap
+  if (s >= 8)  x += WEEKEND_W;   // Sat–Sun 11–12 Apr
+  if (s >= 13) x += WEEKEND_W;   // Sat–Sun 18–19 Apr
+  if (s >= 18) x += WEEKEND_W;   // Sat–Sun 25–26 Apr
+  return x;
+}
+
+function easterX()  { return slotX(3) + DAY_W; }
+function wkndX(ws)  { return slotX(ws.afterSlot) + DAY_W; }
+function chartW()   { return slotX(18) + DAY_W; }
+
+function dateStr(s) {
+  const [d,m,dw] = DATES[s];
+  return `${dw} ${d} ${m}`;
+}
+function barGeom(s, e) {
+  return { left: slotX(s) + 2, width: slotX(e) + DAY_W - slotX(s) - 4 };
+}
+
+// ── CATEGORIES ───────────────────────────────────────────────────────────
+const CATS = {
+  i:{ label:'01 / Store API Integration', c:'#0284C7',
+      solid:'rgba(2,132,199,0.12)',   solidBdr:'rgba(2,132,199,0.55)',
+      ext:'rgba(2,132,199,0.06)',     extBdr:'rgba(2,132,199,0.45)',
+      sep:'rgba(2,132,199,0.2)',
+      msBg:'#0284C7', msText:'#ffffff' },
+  f:{ label:'02 / Core 4 Flows', c:'#CA8A04',
+      solid:'rgba(202,138,4,0.13)',   solidBdr:'rgba(202,138,4,0.55)',
+      ext:'rgba(202,138,4,0.07)',     extBdr:'rgba(202,138,4,0.45)',
+      sep:'rgba(202,138,4,0.22)',
+      msBg:'#CA8A04', msText:'#ffffff' },
+  d:{ label:'03 / Deliverability Fixes — concurrent with RaffClub flow review', c:'#C2410C',
+      solid:'rgba(194,65,12,0.12)',   solidBdr:'rgba(194,65,12,0.55)',
+      ext:'rgba(194,65,12,0.06)',     extBdr:'rgba(194,65,12,0.45)',
+      sep:'rgba(194,65,12,0.2)',
+      msBg:'#C2410C', msText:'#ffffff' },
+};
+
+// ── TASKS ────────────────────────────────────────────────────────────────
+const TASKS = [
+  // Integration
+  { cat:'i', n:'Reach out to Lee — arrange integration',       ow:'OLI',  s:0,  e:0,
+    tip:'Fire off Mon 30 Mar morning. Keep brief — just need a confirmed date/call to kick the API work off.' },
+  { cat:'i', n:'Lee: Complete Omnisend store API integration', ow:'LEE',  s:0,  e:3,  ext:true,
+    tip:'External dependency. Chase Tue 31 Mar if no update. Aim for confirmation before Easter (Good Friday 3 Apr).' },
+  { cat:'i', n:'Confirm integration complete + test',          ow:'OLI',  s:4,  e:4,
+    tip:'First working day back after Easter — Tue 7 Apr. Verify all events firing correctly in Omnisend before flow build begins.' },
+  // Core 4 Flows
+  { cat:'f', n:'Flow journeys mapped (weekend pre-work)',      ow:'OLI',  s:0,  e:0,  pre:true,
+    tip:'Done Sat 28 / Sun 29 Mar. All 4 flow journey maps ready to present on kickoff call Wed 1 Apr.' },
+  { cat:'f', n:'Kickoff call',                                 ow:'BOTH', s:2,  e:2,  ms:true, icon:'⭐',
+    tip:'Wed 1 Apr. Walk RaffClub through strategy and content plan for all 4 flows. Cover: email purpose, sequence logic, tone of voice, CTAs. Pre-send a short agenda.' },
+  { cat:'f', n:'Design templates',                             ow:'OLI',  s:3,  e:5,
+    tip:'Thu 2 Apr – Wed 8 Apr (spans Easter). Sent to RaffClub for sign-off end of day Wed 8 Apr — copywriting starts immediately after.' },
+  { cat:'f', n:'Copywriting — all 4 flows',                   ow:'OLI',  s:6,  e:10,
+    tip:'Thu 9 – Wed 15 Apr (~5 working days, spanning weekend of 11–12 Apr). Starts immediately after design templates wrap. Welcome, Post-purchase, Browse Abandon, Abandon Cart.' },
+  { cat:'f', n:'RaffClub: Approve design templates',           ow:'RAFF', s:6,  e:7,  ext:true,
+    tip:'Thu 9 – Fri 10 Apr — concurrent with copywriting. Chase end of day Thu 9 if no response.' },
+  { cat:'f', n:'Welcome + Post-purchase → into design',        ow:'OLI',  s:11, e:11,
+    tip:'Thu 16 Apr. Drop finalised copy into design templates for Welcome and PP flows. Present to RaffClub same day or first thing Fri.' },
+  { cat:'f', n:'Browse Abandon + Abandon Cart → into design',  ow:'OLI',  s:12, e:12,
+    tip:'Fri 17 Apr. Drop copy into design templates for BA and AC flows. Present alongside or same day as Welcome/PP.' },
+  { cat:'f', n:'RaffClub: Review all flows + submit feedback', ow:'RAFF', s:13, e:15, ext:true,
+    tip:'Mon 20 – Wed 22 Apr (3 working days). Consolidated written feedback only — no drip-fed amends. Make clear this gates the live date. Chase Tue 21 if quiet.' },
+  { cat:'f', n:'Action RaffClub edits',                        ow:'OLI',  s:16, e:16,
+    tip:'Thu 23 Apr. Cannot start until all RaffClub feedback is submitted. Minor amends only — significant rework pushes into Fri or following week.' },
+  { cat:'f', n:'Build + set all flows live',                   ow:'OLI',  s:17, e:18, ms:true, icon:'🚀',
+    tip:'Fri 24 Apr — build and QA all 4 flows in Omnisend. Go live Mon 27 Apr and confirm with RaffClub.' },
+  // Deliverability
+  { cat:'d', n:'Liaise with Lee — flag auth record issues',         ow:'OLI', s:0,  e:1,
+    tip:'Mon 30 – Tue 31 Mar. Raise auth fixes alongside integration kick-off. Audit SPF, DKIM, DMARC — brief Lee on exactly what needs correcting.' },
+  { cat:'d', n:'Inbox placement test + report findings',            ow:'OLI', s:13, e:14,
+    tip:'Mon 20 – Tue 21 Apr. Run via GlockApps or Mail Tester. Concurrent with list clean. Document inbox vs spam rates by provider.' },
+  { cat:'d', n:'List clean (fakes, dupes, hard bounces, unsubs)',   ow:'OLI', s:13, e:14,
+    tip:'Mon 20 – Tue 21 Apr. Concurrent with inbox placement test. Cross-reference existing suppressions — prioritise hard bounces and role-based addresses.' },
+  { cat:'d', n:'Establish exclusion segments',                      ow:'OLI', s:14, e:15,
+    tip:'Tue 21 – Wed 22 Apr. Hard bounces, unsubscribes, negative sentiment, recent purchasers (PP flow takes over). Concurrent with sending segments.' },
+  { cat:'d', n:'Establish sending segments (engagement tiers)',     ow:'OLI', s:14, e:15,
+    tip:'Tue 21 – Wed 22 Apr. Concurrent with exclusion segments. Low / moderate / high engagement tiers based on open/click recency.' },
+  { cat:'d', n:'Lee: Auth record corrections (SPF/DKIM/DMARC)',    ow:'LEE', s:11, e:16, ext:true,
+    tip:'External dependency. Lee implements DNS-level fixes from Thu 16 Apr. Chase by Tue 21 Apr if no confirmation. Verify all records via MXToolbox before going live.' },
+];
+
+// ── GAP BANDS ────────────────────────────────────────────────────────────
+function gapsHtml() {
+  const ex = easterX(), ew = easterW();
+
+  // Easter expanded day columns
+  let easterCols = '';
+  if (easterExpanded) {
+    EASTER_DAYS.forEach(([d,m,dw,n], i) => {
+      easterCols += `<div class="easter-day" style="left:${ex + i * DAY_W}px;width:${DAY_W}px;
+        background:repeating-linear-gradient(-45deg,transparent,transparent 3px,rgba(0,0,0,0.025) 3px,rgba(0,0,0,0.025) 6px);"></div>`;
+    });
+  }
+
+  // Easter toggle button
+  const easterBtn = `
+    <div class="easter-btn" id="easter-btn"
+      style="left:${ex}px;width:${ew}px;
+        background:repeating-linear-gradient(-45deg,transparent,transparent 3px,rgba(0,0,0,0.04) 3px,rgba(0,0,0,0.04) 6px);">
+      <span class="easter-arrow" style="transform:rotate(${easterExpanded?180:0}deg);">▼</span>
+      <span class="easter-label">Easter</span>
+    </div>`;
+
+  // Weekend bands (fixed, always visible)
+  const wkndBands = WEEKENDS.map(ws => {
+    const x = wkndX(ws);
+    return `<div class="gband" style="left:${x}px;width:${WEEKEND_W}px;
+      background:repeating-linear-gradient(-45deg,transparent,transparent 3px,rgba(0,0,0,0.055) 3px,rgba(0,0,0,0.055) 6px);
+      border-left:1px solid var(--border);border-right:1px solid var(--border);">
+      <span style="position:absolute;top:50%;left:50%;
+        transform:translate(-50%,-50%) rotate(-90deg);
+        font-size:5px;font-weight:700;text-transform:uppercase;
+        letter-spacing:0.3px;color:#bbb;white-space:nowrap;">Wknd</span>
+    </div>`;
+  }).join('');
+
+  return `${easterCols}${easterBtn}${wkndBands}`;
+}
+
+function ticksHtml() {
+  return DATES.map((_,i) => `<div class="tick" style="left:${slotX(i)}px"></div>`).join('');
+}
+
+function weekBandsHtml() {
+  const ex = easterX(), ew = easterW(), cw = chartW();
+  return [
+    { x:0,     w:ex,       label:'Week 1  ·  30 Mar – 2 Apr' },
+    { x:ex+ew, w:cw-(ex+ew), label:'Weeks 2–4  ·  7–27 Apr' },
+  ].map(b => `<div style="position:absolute;left:${b.x}px;top:0;width:${b.w}px;
+    font-size:7px;font-weight:700;text-transform:uppercase;
+    letter-spacing:0.6px;color:#ccc;text-align:center;padding-top:2px;">${b.label}</div>`).join('');
+}
+
+function dayLabelsHtml() {
+  let html = DATES.map(([d,m,dw],i) => `
+    <div style="position:absolute;left:${slotX(i)}px;width:${DAY_W}px;top:24px;bottom:0;
+      display:flex;flex-direction:column;align-items:center;
+      justify-content:flex-end;padding-bottom:6px;gap:1px;">
+      <div style="font-size:11px;font-weight:600;color:#555;line-height:1;">${d}</div>
+      <div style="font-size:6.5px;color:#bbb;line-height:1;">${m}</div>
+      <div style="font-size:6px;text-transform:uppercase;letter-spacing:0.4px;color:#ccc;line-height:1;">${dw}</div>
+    </div>`).join('');
+
+  if (easterExpanded) {
+    const ex = easterX();
+    EASTER_DAYS.forEach(([d,m,dw,note],i) => {
+      html += `<div style="position:absolute;left:${ex + i*DAY_W}px;width:${DAY_W}px;top:24px;bottom:0;
+        display:flex;flex-direction:column;align-items:center;
+        justify-content:flex-end;padding-bottom:6px;gap:1px;opacity:0.45;">
+        <div style="font-size:11px;font-weight:600;color:#bbb;line-height:1;">${d}</div>
+        <div style="font-size:6.5px;color:#ccc;line-height:1;">${m}</div>
+        <div style="font-size:6px;text-transform:uppercase;letter-spacing:0.4px;color:#ddd;line-height:1;">${dw}</div>
+        ${note?`<div style="font-size:5px;color:#ccc;letter-spacing:0.2px;white-space:nowrap;">${note}</div>`:''}
+      </div>`;
+    });
+  }
+  return html;
+}
+
+// ── BUILD GANTT ──────────────────────────────────────────────────────────
+function buildGantt() {
+  const cw = chartW();
+  const gantt = document.getElementById('gantt');
+  let html = '';
+
+  html += `<div class="row hdr">
+    <div class="lbl">Task</div>
+    <div class="chart" style="width:${cw}px;">${gapsHtml()}${weekBandsHtml()}${dayLabelsHtml()}</div>
+  </div>`;
+
+  let lastCat = null;
+  TASKS.forEach(t => {
+    const cat = CATS[t.cat];
+    if (t.cat !== lastCat) {
+      html += `<div class="row cat">
+        <div class="lbl" style="color:${cat.c};border-bottom:2px solid ${cat.sep};">${cat.label}</div>
+        <div class="chart" style="width:${cw}px;border-bottom:2px solid ${cat.sep};">${gapsHtml()}</div>
+      </div>`;
+      lastCat = t.cat;
+    }
+
+    const {left, width} = barGeom(t.s, t.e);
+    let bg, border, textColor, tagBg, tagColor;
+
+    if (t.ms) {
+      bg=cat.msBg; border='none'; textColor=cat.msText;
+      tagBg='rgba(255,255,255,0.2)'; tagColor='rgba(255,255,255,0.9)';
+    } else if (t.pre) {
+      bg='rgba(0,0,0,0.04)'; border='1px dashed #ccc'; textColor='#aaa';
+      tagBg='rgba(0,0,0,0.05)'; tagColor='#bbb';
+    } else if (t.ext) {
+      bg=`repeating-linear-gradient(-45deg,${cat.ext},${cat.ext} 4px,transparent 4px,transparent 8px)`;
+      border=`1.5px dashed ${cat.extBdr}`; textColor=cat.c;
+      tagBg=cat.c+'18'; tagColor=cat.c;
+    } else {
+      bg=cat.solid; border=`1px solid ${cat.solidBdr}`; textColor=cat.c;
+      tagBg=cat.c+'18'; tagColor=cat.c;
+    }
+
+    const lblClass  = t.pre?'pre': t.ms?'ms': t.ext?'ext':'';
+    let   lblInner  = t.n;
+    if (t.ms && t.icon) lblInner = `<span class="ms-badge" style="background:${cat.c}18;color:${cat.c};">${t.icon}</span>${t.n}`;
+    const rowClass  = t.ms ? 'row task ms-row' : 'row task';
+    const rowStyle  = t.ms ? `border-left:2px solid ${cat.c};` : '';
+    const barName   = t.n.replace(/^[⭐🚀✓]\s*/,'');
+    const dateRange = t.s===t.e ? dateStr(t.s) : `${dateStr(t.s)} → ${dateStr(t.e)}`;
+    const safeN     = t.n.replace(/"/g,'&quot;');
+    const safeTip   = (t.tip||'').replace(/"/g,'&quot;');
+
+    html += `<div class="${rowClass}" style="${rowStyle}">
+      <div class="lbl ${lblClass}">${lblInner}</div>
+      <div class="chart" style="width:${cw}px;">
+        ${gapsHtml()}${ticksHtml()}
+        <div class="bar"
+          style="left:${left}px;width:${Math.max(width,10)}px;background:${bg};border:${border};color:${textColor};"
+          data-name="${safeN}" data-owner="${t.ow}" data-dates="${dateRange}"
+          data-catc="${cat.c}" data-tip="${safeTip}">
+          <span class="tag" style="background:${tagBg};color:${tagColor};">${t.ow}</span>
+          <span class="bname">${barName}</span>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  gantt.innerHTML = html;
+  bindGanttEvents();
+}
+
+// ── BUILD LIST ───────────────────────────────────────────────────────────
+function buildList() {
+  const listEl = document.getElementById('view-list');
+  const groups = {i:[], f:[], d:[]};
+  TASKS.forEach(t => groups[t.cat].push(t));
+  let html = '';
+
+  Object.entries(groups).forEach(([key, tasks]) => {
+    const cat = CATS[key];
+    html += `<div class="list-section">
+      <div class="list-section-header" style="color:${cat.c};border-bottom-color:${cat.sep};">${cat.label}</div>`;
+    tasks.forEach(t => {
+      const dateRange = t.s===t.e ? dateStr(t.s) : `${dateStr(t.s)} → ${dateStr(t.e)}`;
+      const rowExtra  = t.ms?'ms-list': t.pre?'pre-list':'';
+      const taskExtra = t.ms?'ms-task': t.pre?'pre-task':'';
+      const icon      = t.ms&&t.icon ? `<span class="list-icon">${t.icon}</span>` : '';
+      const extBadge  = t.ext ? `<span style="font-size:6.5px;color:${cat.c};margin-left:6px;opacity:0.6;">EXTERNAL</span>` : '';
+      html += `<div class="list-row ${rowExtra}" style="border-left-color:${cat.c};">
+        <div class="list-task ${taskExtra}">${icon}${t.n}${extBadge}</div>
+        <span class="list-owner" style="background:${cat.c}15;color:${cat.c};">${t.ow}</span>
+        <div class="list-dates">${dateRange}</div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+
+  listEl.innerHTML = html;
+}
+
+// ── EVENTS ───────────────────────────────────────────────────────────────
+function bindGanttEvents() {
+  document.querySelectorAll('#easter-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      easterExpanded = !easterExpanded;
+      buildGantt();
+    });
+  });
+
+  const tt      = document.getElementById('tt'),
+        ttName  = document.getElementById('tt-name'),
+        ttBadge = document.getElementById('tt-badge'),
+        ttDates = document.getElementById('tt-dates'),
+        ttTip   = document.getElementById('tt-tip');
+
+  document.querySelectorAll('.bar').forEach(bar => {
+    bar.addEventListener('click', e => {
+      e.stopPropagation();
+      ttName.textContent  = bar.dataset.name;
+      ttBadge.textContent = bar.dataset.owner;
+      ttBadge.style.background = bar.dataset.catc + '18';
+      ttBadge.style.color = bar.dataset.catc;
+      ttDates.textContent = bar.dataset.dates;
+      const tip = bar.dataset.tip || '';
+      ttTip.textContent = tip;
+      ttTip.style.display = tip ? 'block' : 'none';
+      const r = bar.getBoundingClientRect();
+      let top = r.bottom + 8, left = r.left;
+      if (left + 316 > window.innerWidth)  left = window.innerWidth - 320;
+      if (top  + 140 > window.innerHeight) top  = r.top - 140;
+      tt.style.cssText = `display:block;top:${top}px;left:${left}px;`;
+    });
+  });
+
+  document.addEventListener('click', () => document.getElementById('tt').style.display = 'none');
+}
+
+function setView(v) {
+  document.getElementById('view-gantt').style.display = v==='gantt' ? 'block' : 'none';
+  document.getElementById('view-list').style.display  = v==='list'  ? 'block' : 'none';
+  document.getElementById('btn-gantt').classList.toggle('active', v==='gantt');
+  document.getElementById('btn-list').classList.toggle('active',  v==='list');
+}
+
+buildGantt();
+buildList();
+</script>
+</body>
+</html>
